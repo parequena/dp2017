@@ -63,6 +63,7 @@ def cnn_model(input_shape):
 
     model = Sequential()
 
+    # CONVOLUTION > RELU > POOLING
     model.add(Conv2D(6, (6, 6), padding='same', input_shape = input_shape))
     model.add(Activation("sigmoid"))
     model.add(MaxPooling2D(pool_size=(2, 2)))
