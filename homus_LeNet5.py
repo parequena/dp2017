@@ -50,7 +50,19 @@ def noisy(type, image):
 		coords = [np.random.randint(0, i - 1, int(num_salt)) for i in image.shape]
 
 		noise[coord]
+		
 		# Pepper
+		num_pepper = np.ceil(amount* image.size * (1. - s_vs_p))
+		coords = [np.random.randint(0, i - 1, int(num_pepper)) for i in image.shape]
+
+		noise[coords] = 0
+		
+	elif noise_typ == "poisson":
+		vals = len(np.unique(image))
+		vals = 2 ** np.ceil(np.log2(vals))
+		noise = np.random.poisson(image * vals) / float(vals)
+		
+return noise
 
 def load_data():
     #
