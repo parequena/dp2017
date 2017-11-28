@@ -8,6 +8,8 @@ This example executed with 8x8 reescaled images and 50 epochs obtains an accurac
 
 import numpy as np
 import glob
+import tkinter
+import matplotlib.pyplot as plt
 
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 from keras.models import Sequential
@@ -20,11 +22,35 @@ from keras import backend as K
 
 batch_size = 16
 nb_classes = 32
-epochs = 25
+epochs = 20
 
 # HOMUS contains images of 40 x 40 pixels
 # input image dimensions for train
+# img_rows, img_cols = 5, 5
 img_rows, img_cols = 30, 30
+
+def noisy(type, image):
+	row, col = image.shape
+
+	if type == "gauss":
+		mean = 0
+		var = 0.1
+		sigma = var ** 0.5
+		gauss = np.random.normal(mean, sigma, (row, col))
+		gauss = gauss.reshape(row, col)
+		noise = image + gauss
+
+	elif type == "s&p":
+		s_vs_p = 0.5
+		amount = 0.004
+		noise = image
+
+		# Salt
+		num_salt = np.ceil(amount * image.size, s_vs_p)
+		coords = [np.random.randint(0, i - 1, int(num_salt)) for i in image.shape]
+
+		noise[coord]
+		# Pepper
 
 def load_data():
     #
@@ -35,6 +61,7 @@ def load_data():
     for current_class_number in range(0,nb_classes):    # Number of class
         for filename in glob.glob('./data/HOMUS/train_{}/*.jpg'.format(current_class_number)):
             im = load_img(filename, grayscale=True, target_size=[img_rows, img_cols])  # this is a PIL image
+            # im = noisy("s&p", im) # Add noise
             image_list.append(np.asarray(im).astype('float32')/255)
             class_list.append(current_class_number)
 
@@ -75,7 +102,7 @@ def cnn_model(input_shape):
     model.add(Dropout(0.5)) # Overfitting fix
 
     model.add(Flatten())
-    model.add(Dense(1024))
+    model.add(Dense(500))
     model.add(Activation("relu"))
     model.add(Dense(nb_classes))
 
@@ -105,12 +132,33 @@ model.compile(loss='categorical_crossentropy', optimizer='nadam', metrics=['accu
 early_stopping = EarlyStopping(monitor='loss', patience=3)
 model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs, verbose=1, validation_data=(X_test, Y_test), callbacks=[early_stopping])
 
+history = model.fit(X_train, Y_train, batch_size = batch_size, epochs= epochs,
+	verbose = 2, validation_data = (X_test, Y_test), callbacks=[early_stopping])
+score = model.evaluate(X_test, Y_test, verbose = 1)
+
 #
 # Results
 #
 loss, acc = model.evaluate(X_test, Y_test, verbose=0)
 print('Test score:{:.2f} accuracy: {:.2f}%'.format(loss, acc*100))
 
+print(history.history.keys())
+# summarize history for accuracy
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
+# summarize history for loss
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'test'], loc='upper left')
+plt.show()
 
 # file name to save model
 filename='homus_cnn.h5'
