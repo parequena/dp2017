@@ -14,23 +14,27 @@ import matplotlib.pyplot as plt
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten, MaxPooling2D
-from keras.layers.convolutional import Conv2D
+from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.utils import np_utils
 from keras.models import load_model
 from keras.callbacks import EarlyStopping
 from keras import backend as K
+from keras.wrappers.scikit_learn import KerasClassifier
+from keras.optimizers import SGD, adam, adadelta
+from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import cross_val_score
 
 batch_size = 16
 nb_classes = 32
-epochs = 20
+epochs = 2
 
 # HOMUS contains images of 40 x 40 pixels
 # input image dimensions for train
 # img_rows, img_cols = 5, 5
-img_rows, img_cols = 30, 30
+img_rows, img_cols = 40, 40
 
 def noisy(type, image):
-	row, col = image.shape
+	row, col = image.size
 
 	if type == "gauss":
 		mean = 0
@@ -46,10 +50,10 @@ def noisy(type, image):
 		noise = image
 
 		# Salt
-		num_salt = np.ceil(amount * image.size, s_vs_p)
-		coords = [np.random.randint(0, i - 1, int(num_salt)) for i in image.shape]
+		num_salt = np.ceil((amount * row * col), s_vs_p)
+		coords = [np.random.randint(0, i - 1, int(num_salt)) for i in image.size]
 
-		noise[coord]
+		noise[coords]
 		
 		# Pepper
 		num_pepper = np.ceil(amount* image.size * (1. - s_vs_p))
@@ -60,9 +64,8 @@ def noisy(type, image):
 	elif noise_typ == "poisson":
 		vals = len(np.unique(image))
 		vals = 2 ** np.ceil(np.log2(vals))
-		noise = np.random.poisson(image * vals) / float(vals)
-		
-return noise
+		noise = np.random.poisson(image * vals) / float(vals)		
+	return noise
 
 def load_data():
     #
@@ -70,10 +73,10 @@ def load_data():
     #
     image_list = []
     class_list = []
-    for current_class_number in range(0,nb_classes):    # Number of class
+    for current_class_number in range(0, nb_classes):    # Number of class
         for filename in glob.glob('./data/HOMUS/train_{}/*.jpg'.format(current_class_number)):
             im = load_img(filename, grayscale=True, target_size=[img_rows, img_cols])  # this is a PIL image
-            # im = noisy("s&p", im) # Add noise
+            # im = noisy("s&p", im) # Add noise # Doesn't work!!! *TODO*
             image_list.append(np.asarray(im).astype('float32')/255)
             class_list.append(current_class_number)
 
@@ -103,12 +106,12 @@ def cnn_model(input_shape):
     model = Sequential()
 
     # CONVOLUTION > RELU > POOLING
-    model.add(Conv2D(20, (5, 5), padding='same', input_shape = input_shape))
+    model.add(Conv2D(20, (5, 5), border_mode='same', input_shape = input_shape))
     model.add(Activation("relu"))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=(2,2)))
 
     # CONV > RELU > POOL
-    model.add(Conv2D(50, (5, 5), padding='same'))
+    model.add(Conv2D(50, (5, 5), border_mode ='same'))
     model.add(Activation("relu"))
     model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2)))
     model.add(Dropout(0.5)) # Overfitting fix
@@ -139,14 +142,17 @@ print(epochs, 'epochs')
 model = cnn_model(input_shape)
 print(model.summary())
 
-model.compile(loss='categorical_crossentropy', optimizer='nadam', metrics=['accuracy'])
+# Probando nuevo optimizador
+optimizer = SGD(lr = 0.01, momentum = 0.1, nesterov = False)
+
+model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
 early_stopping = EarlyStopping(monitor='loss', patience=3)
 model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs, verbose=1, validation_data=(X_test, Y_test), callbacks=[early_stopping])
 
 history = model.fit(X_train, Y_train, batch_size = batch_size, epochs= epochs,
 	verbose = 2, validation_data = (X_test, Y_test), callbacks=[early_stopping])
-score = model.evaluate(X_test, Y_test, verbose = 1)
+
 
 #
 # Results
@@ -158,25 +164,25 @@ print(history.history.keys())
 # summarize history for accuracy
 plt.plot(history.history['acc'])
 plt.plot(history.history['val_acc'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
+plt.title('Model Accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
 plt.show()
 # summarize history for loss
 plt.plot(history.history['loss'])
 plt.plot(history.history['val_loss'])
-plt.title('model loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
 plt.show()
 
 # file name to save model
-filename='homus_cnn.h5'
+filename='homus_cnn2.h5'
 
 # save network model
-#model.save(filename)
+model.save(filename)
 
 # load neetwork model
 #model = load_model(filename)
