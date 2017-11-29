@@ -26,46 +26,12 @@ from sklearn.model_selection import cross_val_score
 
 batch_size = 16
 nb_classes = 32
-epochs = 2
+epochs = 30
 
 # HOMUS contains images of 40 x 40 pixels
 # input image dimensions for train
 # img_rows, img_cols = 5, 5
 img_rows, img_cols = 40, 40
-
-def noisy(type, image):
-	row, col = image.size
-
-	if type == "gauss":
-		mean = 0
-		var = 0.1
-		sigma = var ** 0.5
-		gauss = np.random.normal(mean, sigma, (row, col))
-		gauss = gauss.reshape(row, col)
-		noise = image + gauss
-
-	elif type == "s&p":
-		s_vs_p = 0.5
-		amount = 0.004
-		noise = image
-
-		# Salt
-		num_salt = np.ceil((amount * row * col), s_vs_p)
-		coords = [np.random.randint(0, i - 1, int(num_salt)) for i in image.size]
-
-		noise[coords]
-		
-		# Pepper
-		num_pepper = np.ceil(amount* image.size * (1. - s_vs_p))
-		coords = [np.random.randint(0, i - 1, int(num_pepper)) for i in image.shape]
-
-		noise[coords] = 0
-		
-	elif noise_typ == "poisson":
-		vals = len(np.unique(image))
-		vals = 2 ** np.ceil(np.log2(vals))
-		noise = np.random.poisson(image * vals) / float(vals)		
-	return noise
 
 def load_data():
     #
@@ -74,9 +40,8 @@ def load_data():
     image_list = []
     class_list = []
     for current_class_number in range(0, nb_classes):    # Number of class
-        for filename in glob.glob('./data/HOMUS/train_{}/*.jpg'.format(current_class_number)):
+        for filename in glob.glob('./data/HOMUS_maxed/train_{}/*.jpg'.format(current_class_number)):
             im = load_img(filename, grayscale=True, target_size=[img_rows, img_cols])  # this is a PIL image
-            # im = noisy("s&p", im) # Add noise # Doesn't work!!! *TODO*
             image_list.append(np.asarray(im).astype('float32')/255)
             class_list.append(current_class_number)
 
@@ -106,12 +71,13 @@ def cnn_model(input_shape):
     model = Sequential()
 
     # CONVOLUTION > RELU > POOLING
-    model.add(Conv2D(20, (5, 5), border_mode='same', input_shape = input_shape))
+    # 5,5 Es el tamaño del Kernel.
+    model.add(Conv2D(20, 5, 5, border_mode='same', input_shape = input_shape))
     model.add(Activation("relu"))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=(2,2)))
 
     # CONV > RELU > POOL
-    model.add(Conv2D(50, (5, 5), border_mode ='same'))
+    model.add(Conv2D(50, 5, 5, border_mode ='same'))
     model.add(Activation("relu"))
     model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2)))
     model.add(Dropout(0.5)) # Overfitting fix
@@ -179,7 +145,7 @@ plt.legend(['Train', 'Test'], loc='upper left')
 plt.show()
 
 # file name to save model
-filename='homus_cnn2.h5'
+filename='homus_cnn_max.h5'
 
 # save network model
 model.save(filename)
