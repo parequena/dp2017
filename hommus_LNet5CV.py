@@ -56,11 +56,11 @@ def load_data():
 
     Y = np_utils.to_categorical(np.asarray(class_list), nb_classes)
 
-    msk = np.random.rand(len(X)) < 0.9 # Train 90% and Test 10%
-    X_train, X_test = X[msk], X[~msk]
-    Y_train, Y_test = Y[msk], Y[~msk]
-
-    return X_train, Y_train, X_test, Y_test, input_shape
+    # msk = np.random.rand(len(X)) < 0.9 # Train 90% and Test 10%
+    # X_train, X_test = X[msk], X[~msk]
+    # Y_train, Y_test = Y[msk], Y[~msk]
+# 
+    return X, Y, input_shape
 
 
 def cnn_model(input_shape):
@@ -111,41 +111,88 @@ print(model.summary())
 # Probando nuevo optimizador
 optimizer = SGD(lr = 0.01, momentum = 0.1, nesterov = False)
 
-model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
 
-early_stopping = EarlyStopping(monitor='loss', patience=3)
-model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs, verbose=1, validation_data=(X_test, Y_test), callbacks=[early_stopping])
 
-history = model.fit(X_train, Y_train, batch_size = batch_size, epochs= epochs,
-	verbose = 2, validation_data = (X_test, Y_test), callbacks=[early_stopping])
+kfold = StratifiedKFold(n_splits=10, shuffle=False)
+cvscores = []
+i = 0
+
+for train, test in kfold.split(X, Y):
+    print ('fold {}'.format(i + 1))
+    model = create_model()
+    model.compile(loss = 'categorical_crossentropy',optimizer = optimizer, metrics = ['accuracy'])
+    yTrain = np_utils.to_categorical(Y[train], nb_classes)
+    yTest = np_utils.to_categorical(Y[test], nb_classes)
+    history = model.fit(X[train], yTrain, nb_epoch=nb_epoch, batch_size=10, verbose=2, validation_data = (X[test], yTest))
+    # evaluate the model
+    scores = model.evaluate(X[test], yTest, verbose=0)
+    print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+    cvscores.append(scores[1] * 100)
+    i += 1
+    # list all data in history
+    print(history.history.keys())
+    # summarize history for accuracy
+    plt.plot(history.history['acc'])
+    plt.plot(history.history['val_acc'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()
+    # summarize history for loss
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'test'], loc='upper left')
+    plt.show()
 
 
 #
 # Results
 #
-loss, acc = model.evaluate(X_test, Y_test, verbose=0)
-print('Test score:{:.2f} accuracy: {:.2f}%'.format(loss, acc*100))
+f = open('workfile', 'w')
+for score in cvscores:
+    f.write('{}\n'.format(score))
+print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
 
-print(history.history.keys())
-# summarize history for accuracy
-plt.plot(history.history['acc'])
-plt.plot(history.history['val_acc'])
-plt.title('Model Accuracy')
-plt.ylabel('Accuracy')
-plt.xlabel('Epoch')
-plt.legend(['Train', 'Test'], loc='upper left')
-plt.show()
-# summarize history for loss
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('Model loss')
-plt.ylabel('Loss')
-plt.xlabel('Epoch')
-plt.legend(['Train', 'Test'], loc='upper left')
-plt.show()
 
-# file name to save model
-filename='homus_cnn_max_20.h5'
+# model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
+# 
+# early_stopping = EarlyStopping(monitor='loss', patience=3)
+# model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs, verbose=1, validation_data=(X_test, Y_test), callbacks=[early_stopping])
+# 
+# history = model.fit(X_train, Y_train, batch_size = batch_size, epochs= epochs,
+# 	verbose = 2, validation_data = (X_test, Y_test), callbacks=[early_stopping])
+# 
+# 
+# #
+# # Results
+# #
+# loss, acc = model.evaluate(X_test, Y_test, verbose=0)
+# print('Test score:{:.2f} accuracy: {:.2f}%'.format(loss, acc*100))
+# 
+# print(history.history.keys())
+# # summarize history for accuracy
+# plt.plot(history.history['acc'])
+# plt.plot(history.history['val_acc'])
+# plt.title('Model Accuracy')
+# plt.ylabel('Accuracy')
+# plt.xlabel('Epoch')
+# plt.legend(['Train', 'Test'], loc='upper left')
+# plt.show()
+# # summarize history for loss
+# plt.plot(history.history['loss'])
+# plt.plot(history.history['val_loss'])
+# plt.title('Model loss')
+# plt.ylabel('Loss')
+# plt.xlabel('Epoch')
+# plt.legend(['Train', 'Test'], loc='upper left')
+# plt.show()
+# 
+# # file name to save model
+filename='homus_cnn_CV.h5'
 
 # save network model
 model.save(filename)
