@@ -26,12 +26,12 @@ from sklearn.model_selection import cross_val_score
 
 batch_size = 16
 nb_classes = 32
-epochs = 30
+epochs = 20
 
 # HOMUS contains images of 40 x 40 pixels
 # input image dimensions for train
 # img_rows, img_cols = 5, 5
-img_rows, img_cols = 40, 40
+img_rows, img_cols = 20, 20
 
 def load_data():
     #
@@ -145,7 +145,7 @@ plt.legend(['Train', 'Test'], loc='upper left')
 plt.show()
 
 # file name to save model
-filename='homus_cnn_max.h5'
+filename='homus_cnn_max_20.h5'
 
 # save network model
 model.save(filename)
