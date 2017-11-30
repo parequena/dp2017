@@ -40,7 +40,7 @@ def load_data():
     image_list = []
     class_list = []
     for current_class_number in range(0, nb_classes):    # Number of class
-        for filename in glob.glob('./data/HOMUS_maxed/train_{}/*.jpg'.format(current_class_number)):
+        for filename in glob.glob('./data/HOMUS/train_{}/*.jpg'.format(current_class_number)):
             im = load_img(filename, grayscale=True, target_size=[img_rows, img_cols])  # this is a PIL image
             image_list.append(np.asarray(im).astype('float32')/255)
             class_list.append(current_class_number)
@@ -54,7 +54,7 @@ def load_data():
         X = np.asarray(image_list).reshape(n, img_rows, img_cols, 1)
         input_shape = (img_rows, img_cols, 1)
 
-    Y = np_utils.to_categorical(np.asarray(class_list), nb_classes)
+    Y = np.asarray(class_list)
 
     # msk = np.random.rand(len(X)) < 0.9 # Train 90% and Test 10%
     # X_train, X_test = X[msk], X[~msk]
@@ -63,7 +63,7 @@ def load_data():
     return X, Y, input_shape
 
 
-def cnn_model(input_shape):
+def cnn_model():
     #
     # LeNet-5: Artificial Neural Network Structure
     #
@@ -72,12 +72,12 @@ def cnn_model(input_shape):
 
     # CONVOLUTION > RELU > POOLING
     # 5,5 Es el tamaño del Kernel.
-    model.add(Conv2D(20, 5, 5, border_mode='same', input_shape = input_shape))
+    model.add(Conv2D(20, (5, 5), border_mode="same", input_shape = input_shape))
     model.add(Activation("relu"))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=(2,2)))
 
     # CONV > RELU > POOL
-    model.add(Conv2D(50, 5, 5, border_mode ='same'))
+    model.add(Conv2D(50, (5, 5), border_mode ="same"))
     model.add(Activation("relu"))
     model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2)))
     model.add(Dropout(0.5)) # Overfitting fix
@@ -97,33 +97,34 @@ def cnn_model(input_shape):
 # Main program
 
 # the data split between train and test sets
-X_train, Y_train, X_test, Y_test, input_shape = load_data()
+X, Y, input_shape= load_data()
 
-print(X_train.shape[0], 'train samples')
-print(X_test.shape[0], 'test samples')
-print(img_rows, 'x', img_cols, 'image size')
+# print(X_train.shape[0], 'train samples')
+# print(X_test.shape[0], 'test samples')
+# print(img_rows, 'x', img_cols, 'image size')
 print(input_shape, 'input_shape')
 print(epochs, 'epochs')
 
-model = cnn_model(input_shape)
-print(model.summary())
+# model = cnn_model(input_shape)
+# print(model.summary())
 
 # Probando nuevo optimizador
 optimizer = SGD(lr = 0.01, momentum = 0.1, nesterov = False)
 
 
 
-kfold = StratifiedKFold(n_splits=10, shuffle=False)
+kfold = StratifiedKFold(n_splits=10, shuffle=True)
 cvscores = []
 i = 0
 
+# for train, test in kfold.split(X, Y):
 for train, test in kfold.split(X, Y):
     print ('fold {}'.format(i + 1))
-    model = create_model()
+    model = cnn_model()
     model.compile(loss = 'categorical_crossentropy',optimizer = optimizer, metrics = ['accuracy'])
     yTrain = np_utils.to_categorical(Y[train], nb_classes)
     yTest = np_utils.to_categorical(Y[test], nb_classes)
-    history = model.fit(X[train], yTrain, nb_epoch=nb_epoch, batch_size=10, verbose=2, validation_data = (X[test], yTest))
+    history = model.fit(X[train], yTrain, epochs=epochs, batch_size=10, verbose=2, validation_data = (X[test], yTest))
     # evaluate the model
     scores = model.evaluate(X[test], yTest, verbose=0)
     print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
@@ -132,21 +133,25 @@ for train, test in kfold.split(X, Y):
     # list all data in history
     print(history.history.keys())
     # summarize history for accuracy
+    figName = str(i) + "- Acc"
+    plt.figure(figName)
     plt.plot(history.history['acc'])
     plt.plot(history.history['val_acc'])
     plt.title('model accuracy')
     plt.ylabel('accuracy')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
-    plt.show()
+    plt.draw()
     # summarize history for loss
+    figName = str(i) + "- Loss"
+    plt.figure(figName)
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.title('model loss')
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
-    plt.show()
+    plt.draw()
 
 
 #
@@ -196,6 +201,9 @@ filename='homus_cnn_CV.h5'
 
 # save network model
 model.save(filename)
+
+
+plt.show()
 
 # load neetwork model
 #model = load_model(filename)
