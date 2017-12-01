@@ -40,7 +40,7 @@ def load_data():
     image_list = []
     class_list = []
     for current_class_number in range(0, nb_classes):    # Number of class
-        for filename in glob.glob('./data/HOMUS/train_{}/*.jpg'.format(current_class_number)):
+        for filename in glob.glob('./data/HOMUS_maxed/train_{}/*.jpg'.format(current_class_number)):
             im = load_img(filename, grayscale=True, target_size=[img_rows, img_cols])  # this is a PIL image
             image_list.append(np.asarray(im).astype('float32')/255)
             class_list.append(current_class_number)
@@ -197,7 +197,7 @@ print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
 # plt.show()
 # 
 # # file name to save model
-filename='homus_cnn_CV.h5'
+filename='homus_cnn_CV_max.h5'
 
 # save network model
 model.save(filename)
