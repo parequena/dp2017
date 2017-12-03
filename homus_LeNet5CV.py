@@ -72,19 +72,19 @@ def cnn_model():
 
     # CONVOLUTION > RELU > POOLING
     # 5,5 Es el tamaño del Kernel.
-    model.add(Conv2D(20, (5, 5), border_mode="same", input_shape = input_shape))
-    model.add(Activation("relu"))
+    model.add(Conv2D(20, (5, 5), padding='same', input_shape = input_shape))
+    model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2, 2), strides=(2,2)))
 
     # CONV > RELU > POOL
-    model.add(Conv2D(50, (5, 5), border_mode ="same"))
-    model.add(Activation("relu"))
+    model.add(Conv2D(50, (5, 5), padding ='same'))
+    model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2,2), strides=(2,2)))
     model.add(Dropout(0.5)) # Overfitting fix
 
     model.add(Flatten())
     model.add(Dense(500))
-    model.add(Activation("relu"))
+    model.add(Activation('relu'))
     model.add(Dense(nb_classes))
 
     # Softmax classifier
@@ -124,7 +124,7 @@ for train, test in kfold.split(X, Y):
     model.compile(loss = 'categorical_crossentropy',optimizer = optimizer, metrics = ['accuracy'])
     yTrain = np_utils.to_categorical(Y[train], nb_classes)
     yTest = np_utils.to_categorical(Y[test], nb_classes)
-    history = model.fit(X[train], yTrain, epochs=epochs, batch_size=10, verbose=2, validation_data = (X[test], yTest))
+    history = model.fit(X[train], yTrain, epochs=epochs, batch_size=batch_size, verbose=2, validation_data = (X[test], yTest))
     # evaluate the model
     scores = model.evaluate(X[test], yTest, verbose=0)
     print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
@@ -153,51 +153,22 @@ for train, test in kfold.split(X, Y):
     plt.legend(['train', 'test'], loc='upper left')
     plt.draw()
 
+    filename = 'homus_cnn_CV_fin' + str(i) + '.h5'
+
+    # save network model
+    model.save(filename)
+
 
 #
 # Results
 #
-f = open('workfile', 'w')
+f = open('workfile_CV_max_fin', 'w')
 for score in cvscores:
     f.write('{}\n'.format(score))
 print("%.2f%% (+/- %.2f%%)" % (np.mean(cvscores), np.std(cvscores)))
 
-
-# model.compile(loss='categorical_crossentropy', optimizer=optimizer, metrics=['accuracy'])
-# 
-# early_stopping = EarlyStopping(monitor='loss', patience=3)
-# model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs, verbose=1, validation_data=(X_test, Y_test), callbacks=[early_stopping])
-# 
-# history = model.fit(X_train, Y_train, batch_size = batch_size, epochs= epochs,
-# 	verbose = 2, validation_data = (X_test, Y_test), callbacks=[early_stopping])
-# 
-# 
-# #
-# # Results
-# #
-# loss, acc = model.evaluate(X_test, Y_test, verbose=0)
-# print('Test score:{:.2f} accuracy: {:.2f}%'.format(loss, acc*100))
-# 
-# print(history.history.keys())
-# # summarize history for accuracy
-# plt.plot(history.history['acc'])
-# plt.plot(history.history['val_acc'])
-# plt.title('Model Accuracy')
-# plt.ylabel('Accuracy')
-# plt.xlabel('Epoch')
-# plt.legend(['Train', 'Test'], loc='upper left')
-# plt.show()
-# # summarize history for loss
-# plt.plot(history.history['loss'])
-# plt.plot(history.history['val_loss'])
-# plt.title('Model loss')
-# plt.ylabel('Loss')
-# plt.xlabel('Epoch')
-# plt.legend(['Train', 'Test'], loc='upper left')
-# plt.show()
-# 
 # # file name to save model
-filename='homus_cnn_CV_max.h5'
+filename='homus_cnn_CV_fin_all.h5'
 
 # save network model
 model.save(filename)
