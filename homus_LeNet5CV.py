@@ -24,7 +24,7 @@ from keras.optimizers import SGD, adam, adadelta
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import cross_val_score
 
-batch_size = 16
+batch_size = 10
 nb_classes = 32
 epochs = 30
 
@@ -110,8 +110,6 @@ print(epochs, 'epochs')
 
 # Probando nuevo optimizador
 optimizer = SGD(lr = 0.01, momentum = 0.1, nesterov = False)
-
-
 
 kfold = StratifiedKFold(n_splits=10, shuffle=True)
 cvscores = []
